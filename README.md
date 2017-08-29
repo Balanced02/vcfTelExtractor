@@ -1,4 +1,4 @@
-	Extract Phone Numbers fro VCF files
+	Extract Phone Numbers from VCF files
 		*/
 			extractTel(path, function(err, data) {
 			if(err)
