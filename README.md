@@ -1,10 +1,10 @@
-Extract Phone Numbers fro VCF files
-	*/
-    extractTel(path, function(err, data) {
-		if(err)
-			return console.log(err);
-		console.log(data);
-	})
+	Extract Phone Numbers fro VCF files
+		*/
+			extractTel(path, function(err, data) {
+			if(err)
+				return console.log(err);
+			console.log(data);
+		})
 
 ### License
 
