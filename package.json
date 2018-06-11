@@ -1,8 +1,8 @@
 {
-  "name": "telextractor",
+  "name": "vcftelextractor",
   "version": "0.0.1",
   "description": "A simple function to extract telphones from vcf file",
-  "main": "extractTelFromVcf.js",
+  "main": "index.js",
   "scripts": {
     "test": "Test"
   },
@@ -20,6 +20,9 @@
   ],
   "author": "Balanced02",
   "license": "MIT",
+  "engines": {
+    "node": ">=8.1.0"
+  },
   "bugs": {
     "url": "https://github.com/Balanced02/vcfTelExtractor/issues"
   },
