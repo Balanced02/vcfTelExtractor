@@ -1,6 +1,6 @@
 {
   "name": "vcftelextractor",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A simple module to extract telphones from vcf file",
   "main": "index.js",
   "scripts": {
