@@ -6,7 +6,7 @@
 
 ### Options
 
-####prefix (default: false)
+#### prefix (default: false)
 
 - Returns phone numbers with the + sign when it's set to true
 
