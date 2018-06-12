@@ -1,9 +1,10 @@
-    const extractTel = require('vcftelextractor)
+const extractTel = require('vcftelextractor)
+
     Extract Phone Numbers from VCF files
-    		extractTel(path, function(err, data) {
-    		if(err) console.log(err);
+    	extractTel(path, function(err, data) {
+    		if(err) return
     		console.log(data);
-    	}, { prefix: false, minLength: 9 })
+    	}, { prefix: false })
 
 ### Options
 
