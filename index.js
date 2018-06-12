@@ -1,7 +1,10 @@
 var readFile = require("./readFile");
 
-function extractTel(path, callback, { prefix = false } = {}) {
-  if (!path) callback(new Error("Please provide a path"));
+function extractTel(path, callback = (err, data) => {}, {
+  prefix = false
+} = {}) {
+  if (!callback) return;
+  if (!path) return callback(new Error("Path is a required argument"))
   readFile(path, (err, data) => {
     if (err) {
       callback(err);
