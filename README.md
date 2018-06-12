@@ -1,12 +1,13 @@
+    const extractTel = require('vcftelextractor)
     Extract Phone Numbers from VCF files
     		extractTel(path, function(err, data) {
     		if(err) console.log(err);
     		console.log(data);
-    	}, { prefix: false })
+    	}, { prefix: false, minLength: 9 })
 
 ### Options
 
-#### prefix (default: false)
+#### prefix ({default: false})
 
 - Returns phone numbers with the + sign when it's set to true
 
