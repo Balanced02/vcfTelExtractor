@@ -92,6 +92,15 @@ describe('vcfTelExtractor (dist integration)', function () {
       expect(resultNoPrefix).to.deep.equal(['1234567890']);
     });
 
+    it('should strip embedded spaces and hyphens in onlyNumbers mode even without normalization', () => {
+      const data = `BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nTEL:+44 20 7946 0018\nEND:VCARD`;
+      const resultPrefix = parseVcard(data, { onlyNumbers: true, prefix: true });
+      expect(resultPrefix).to.deep.equal(['+442079460018']);
+
+      const resultNoPrefix = parseVcard(data, { onlyNumbers: true, prefix: false });
+      expect(resultNoPrefix).to.deep.equal(['442079460018']);
+    });
+
     it('should filter fields when fields option is provided', () => {
       const data = `BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nTEL:+1234567890\nEMAIL:john@example.com\nEND:VCARD`;
       const result = parseVcard(data, { fields: ['number', 'firstName'] });
@@ -219,9 +228,21 @@ describe('vcfTelExtractor (dist integration)', function () {
       ]);
     });
 
-    it('should correctly parse and save property parameters/attributes in metadata', () => {
+    it('should not parse or save parameters by default', () => {
       const data = `BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nTEL;TYPE=CELL,VOICE;VALUE=uri:+1234567890\nEND:VCARD`;
       const result = parseVcard(data);
+      expect(result).to.deep.equal([
+        {
+          number: '+1234567890',
+          firstName: 'John Doe',
+          version: '3.0',
+        },
+      ]);
+    });
+
+    it('should parse and save property parameters/attributes in metadata when params: true', () => {
+      const data = `BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nTEL;TYPE=CELL,VOICE;VALUE=uri:+1234567890\nEND:VCARD`;
+      const result = parseVcard(data, { params: true });
       expect(result).to.deep.equal([
         {
           number: '+1234567890',

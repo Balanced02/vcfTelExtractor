@@ -67,6 +67,7 @@ export function parseVcard(data: string, options: ExtractTelOptions = {}): Conta
     normalize,
     mappings = {},
     multiValueMode = 'array',
+    params: includeParams = false,
   } = options;
 
   const keyMappings = { ...DEFAULT_MAPPINGS, ...mappings };
@@ -134,31 +135,26 @@ export function parseVcard(data: string, options: ExtractTelOptions = {}): Conta
       parsedVal = normalizePhone(parsedVal, normalize, countryCode);
     }
 
-    // Parse parameters
-    const propertyParams: Record<string, string[]> = {};
-    for (let i = 1; i < paramParts.length; i++) {
-      const param = paramParts[i];
-      const eqIdx = param.indexOf('=');
-      if (eqIdx !== -1) {
-        const pName = param.substring(0, eqIdx).toUpperCase();
-        const pVal = param.substring(eqIdx + 1);
-        const cleanVal = pVal.replace(/^"|"$/g, '');
-        propertyParams[pName] = cleanVal.split(',');
-      } else {
-        // Implicit type in older vCard versions (e.g., TEL;CELL;WORK:)
-        if (!propertyParams['TYPE']) {
-          propertyParams['TYPE'] = [];
+    // Parse parameters only if requested
+    let propertyParams: Record<string, string[]> | undefined;
+    if (includeParams) {
+      propertyParams = {};
+      for (let i = 1; i < paramParts.length; i++) {
+        const param = paramParts[i];
+        const eqIdx = param.indexOf('=');
+        if (eqIdx !== -1) {
+          const pName = param.substring(0, eqIdx).toUpperCase();
+          const pVal = param.substring(eqIdx + 1);
+          const cleanVal = pVal.replace(/^"|"$/g, '');
+          propertyParams[pName] = cleanVal.split(',');
+        } else {
+          // Implicit type in older vCard versions (e.g., TEL;CELL;WORK:)
+          if (!propertyParams['TYPE']) {
+            propertyParams['TYPE'] = [];
+          }
+          propertyParams['TYPE'].push(param.toUpperCase());
         }
-        propertyParams['TYPE'].push(param.toUpperCase());
       }
-    }
-
-    // Save field parameters to the Contact metadata
-    if (!currentContact.params) {
-      currentContact.params = {};
-    }
-    if (!currentContact.params[mappedKey]) {
-      currentContact.params[mappedKey] = [];
     }
 
     // Save value & align parameters array length
@@ -170,34 +166,53 @@ export function parseVcard(data: string, options: ExtractTelOptions = {}): Conta
         } else {
           currentContact[mappedKey] = [existing, parsedVal];
         }
-        currentContact.params[mappedKey].push(propertyParams);
+        if (includeParams && propertyParams) {
+          if (!currentContact.params) {
+            currentContact.params = {};
+          }
+          if (!currentContact.params[mappedKey]) {
+            currentContact.params[mappedKey] = [];
+          }
+          currentContact.params[mappedKey].push(propertyParams);
+        }
       } else {
         currentContact[mappedKey] = parsedVal;
-        currentContact.params[mappedKey] = [propertyParams];
+        if (includeParams && propertyParams) {
+          if (!currentContact.params) {
+            currentContact.params = {};
+          }
+          currentContact.params[mappedKey] = [propertyParams];
+        }
       }
     } else {
       currentContact[mappedKey] = parsedVal;
-      currentContact.params[mappedKey] = [propertyParams];
+      if (includeParams && propertyParams) {
+        if (!currentContact.params) {
+          currentContact.params = {};
+        }
+        currentContact.params[mappedKey] = [propertyParams];
+      }
     }
   }
 
   saveCurrentContact();
 
   // Clean up empty params objects for returned contacts
-  for (const contact of contacts) {
-    if (contact.params) {
-      let hasAnyParams = false;
-      for (const k of Object.keys(contact.params)) {
-        // Filter out fields with only empty parameter records
-        contact.params[k] = contact.params[k].filter(p => Object.keys(p).length > 0);
-        if (contact.params[k].length > 0) {
-          hasAnyParams = true;
-        } else {
-          delete contact.params[k];
+  if (includeParams) {
+    for (const contact of contacts) {
+      if (contact.params) {
+        let hasAnyParams = false;
+        for (const k of Object.keys(contact.params)) {
+          contact.params[k] = contact.params[k].filter(p => Object.keys(p).length > 0);
+          if (contact.params[k].length > 0) {
+            hasAnyParams = true;
+          } else {
+            delete contact.params[k];
+          }
         }
-      }
-      if (!hasAnyParams) {
-        delete contact.params;
+        if (!hasAnyParams) {
+          delete contact.params;
+        }
       }
     }
   }
@@ -210,11 +225,14 @@ export function parseVcard(data: string, options: ExtractTelOptions = {}): Conta
       const numList = Array.isArray(nums) ? nums : [nums];
       for (let num of numList) {
         if (!num) continue;
-        let processed = num;
-        if (!prefix && processed.startsWith('+')) {
-          processed = processed.substring(1);
+        // Strip spaces, hyphens, parentheses, etc. for onlyNumbers array output
+        let cleaned = num.replace(/[^\d+]/g, '');
+        if (!prefix && cleaned.startsWith('+')) {
+          cleaned = cleaned.substring(1);
         }
-        phoneNumbers.push(processed);
+        if (cleaned) {
+          phoneNumbers.push(cleaned);
+        }
       }
     }
     return phoneNumbers;

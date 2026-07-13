@@ -51,13 +51,20 @@ export interface ExtractTelOptions {
    * Default is 'array'.
    */
   multiValueMode?: 'array' | 'last';
+
+  /**
+   * If true, includes parameter metadata for each parsed field on the contact
+   * under a special `params` property.
+   * Default is false.
+   */
+  params?: boolean;
 }
 
 export interface Contact {
   number?: string | string[];
-  firstName?: string;
+  firstName?: string | string[];
   email?: string | string[];
-  version?: string;
+  version?: string | string[];
   params?: Record<string, Record<string, string[]>[]>;
   [key: string]: any;
 }

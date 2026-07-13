@@ -45,7 +45,7 @@ Core function. In Node.js, it accepts a file path or a raw vCard string. In the 
 * **`input` (String):** The path to the vCard file (Node.js only) or raw vCard string content.
 * **`options` (Object):** Optional configuration object:
   * **`fields` (Array<String>):** List of mapped fields to include in the output. If empty, all available fields are included.
-  * **`onlyNumbers` (Boolean):** If `true`, returns a flat array of phone number strings. Default is `false`.
+  * **`onlyNumbers` (Boolean):** If `true`, returns a flat array of phone number strings (spaces/hyphens stripped). Default is `false`.
   * **`prefix` (Boolean):** If `true`, includes the `+` prefix for phone numbers in `onlyNumbers` output. Default is `false`.
   * **`normalize` (Boolean | Function):** Normalization strategy:
     * `true`: Normalizes numbers to E.164 format using `libphonenumber-js`.
@@ -60,6 +60,7 @@ Core function. In Node.js, it accepts a file path or a raw vCard string. In the 
   * **`multiValueMode` (String):** Action for fields appearing multiple times per contact:
     * `'array'` (default): Combines values into an array (e.g., `number: ['+123', '+456']`).
     * `'last'`: Overwrites with the last value (v1 behavior).
+  * **`params` (Boolean):** If `true`, includes parameter attributes (like `TYPE=CELL`) in a nested metadata `params` property for each contact. Default is `false`.
 
 #### `parseVcard(vcardString, options?)`
 A synchronous, browser-safe function that parses a raw vCard string content directly.
@@ -104,6 +105,30 @@ console.log(contacts);
 // [{ firstName: 'Jane Doe', number: '+15555555555' }]
 ```
 
+#### Example 4: Extracting Parameters and Attributes
+```javascript
+import { parseVcard } from 'vcfTelExtractor';
+
+const rawVcard = `BEGIN:VCARD
+VERSION:3.0
+FN:Jane Doe
+TEL;TYPE=CELL,VOICE;VALUE=uri:+15555555555
+END:VCARD`;
+
+const contacts = parseVcard(rawVcard, { params: true });
+console.log(contacts);
+/* Output:
+[{
+  firstName: 'Jane Doe',
+  number: '+15555555555',
+  version: '3.0',
+  params: {
+    number: [{ TYPE: ['CELL', 'VOICE'], VALUE: ['uri'] }]
+  }
+}]
+*/
+```
+
 ---
 
 ## Testing
@@ -118,4 +143,4 @@ npm test
 
 ## License
 
-MIT License. Copyright (c) Wouter Vroege.
+MIT License. Copyright (c) 2012 Wouter Vroege, 2026 Balanced02.
