@@ -17,14 +17,14 @@ export function unfoldVcard(data: string): string {
 }
 
 /**
- * Unescapes special characters in vCard property values.
+ * Unescapes special characters in vCard property values in a single left-to-right pass.
  */
 export function unescapeValue(val: string): string {
-  return val
-    .replace(/\\n/gi, '\n')
-    .replace(/\\,/g, ',')
-    .replace(/\\;/g, ';')
-    .replace(/\\\\/g, '\\');
+  return val.replace(/\\(n|N|,|;|\\)/g, (_, p1) => {
+    const lower = p1.toLowerCase();
+    if (lower === 'n') return '\n';
+    return p1;
+  });
 }
 
 /**
@@ -46,9 +46,8 @@ export function normalizePhone(
         return parsed.format('E.164');
       }
     } catch {
-      // Fallback on error
+      // Silently fall through to generic digits cleanup on error
     }
-    // Fallback normalization: strip non-digits, keep leading '+'
     return phone.replace(/[^\d+]/g, '');
   }
 
@@ -79,7 +78,6 @@ export function parseVcard(data: string, options: ExtractTelOptions = {}): Conta
   let currentContact: Contact = {};
 
   const saveCurrentContact = () => {
-    // Delete any empty keys that might have been created by malformed lines
     delete currentContact[''];
     if (Object.keys(currentContact).length > 0) {
       contacts.push(currentContact);
@@ -109,7 +107,7 @@ export function parseVcard(data: string, options: ExtractTelOptions = {}): Conta
       restOfKey = keyPart.substring(dotIdx + 1);
     }
 
-    // Split parameters to get the base property name
+    // Split parameters to get the base property name and attributes
     const paramParts = restOfKey.split(';');
     const rawKey = paramParts[0].toUpperCase();
 
@@ -136,7 +134,34 @@ export function parseVcard(data: string, options: ExtractTelOptions = {}): Conta
       parsedVal = normalizePhone(parsedVal, normalize, countryCode);
     }
 
-    // Handle multi-value fields
+    // Parse parameters
+    const propertyParams: Record<string, string[]> = {};
+    for (let i = 1; i < paramParts.length; i++) {
+      const param = paramParts[i];
+      const eqIdx = param.indexOf('=');
+      if (eqIdx !== -1) {
+        const pName = param.substring(0, eqIdx).toUpperCase();
+        const pVal = param.substring(eqIdx + 1);
+        const cleanVal = pVal.replace(/^"|"$/g, '');
+        propertyParams[pName] = cleanVal.split(',');
+      } else {
+        // Implicit type in older vCard versions (e.g., TEL;CELL;WORK:)
+        if (!propertyParams['TYPE']) {
+          propertyParams['TYPE'] = [];
+        }
+        propertyParams['TYPE'].push(param.toUpperCase());
+      }
+    }
+
+    // Save field parameters to the Contact metadata
+    if (!currentContact.params) {
+      currentContact.params = {};
+    }
+    if (!currentContact.params[mappedKey]) {
+      currentContact.params[mappedKey] = [];
+    }
+
+    // Save value & align parameters array length
     if (currentContact[mappedKey] !== undefined) {
       if (multiValueMode === 'array') {
         const existing = currentContact[mappedKey];
@@ -145,15 +170,37 @@ export function parseVcard(data: string, options: ExtractTelOptions = {}): Conta
         } else {
           currentContact[mappedKey] = [existing, parsedVal];
         }
+        currentContact.params[mappedKey].push(propertyParams);
       } else {
         currentContact[mappedKey] = parsedVal;
+        currentContact.params[mappedKey] = [propertyParams];
       }
     } else {
       currentContact[mappedKey] = parsedVal;
+      currentContact.params[mappedKey] = [propertyParams];
     }
   }
 
   saveCurrentContact();
+
+  // Clean up empty params objects for returned contacts
+  for (const contact of contacts) {
+    if (contact.params) {
+      let hasAnyParams = false;
+      for (const k of Object.keys(contact.params)) {
+        // Filter out fields with only empty parameter records
+        contact.params[k] = contact.params[k].filter(p => Object.keys(p).length > 0);
+        if (contact.params[k].length > 0) {
+          hasAnyParams = true;
+        } else {
+          delete contact.params[k];
+        }
+      }
+      if (!hasAnyParams) {
+        delete contact.params;
+      }
+    }
+  }
 
   if (onlyNumbers) {
     const phoneNumbers: string[] = [];
@@ -162,17 +209,12 @@ export function parseVcard(data: string, options: ExtractTelOptions = {}): Conta
       if (!nums) continue;
       const numList = Array.isArray(nums) ? nums : [nums];
       for (let num of numList) {
-        // Strip spaces/hyphens for onlyNumbers array output
-        let cleaned = num.replace(/[^\d+]/g, '');
-        // Strip plus prefix if prefix option is false
-        if (!prefix && cleaned.startsWith('+')) {
-          cleaned = cleaned.substring(1);
+        if (!num) continue;
+        let processed = num;
+        if (!prefix && processed.startsWith('+')) {
+          processed = processed.substring(1);
         }
-        // Filter out unwanted single digits like '3' or '0'
-        if (/^3$|^0$/.test(cleaned) || !cleaned) {
-          continue;
-        }
-        phoneNumbers.push(cleaned);
+        phoneNumbers.push(processed);
       }
     }
     return phoneNumbers;

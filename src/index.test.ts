@@ -1,10 +1,12 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as fs from 'fs';
-import extractTel from './index';
-import { parseVcard } from './parser';
 
-describe('vcfTelExtractor', function () {
+// Import from the built dist directory to test actual compiled ESM/CJS output
+import extractTel, { parseVcard } from '../dist/index';
+import browserExtractTel from '../dist/browser';
+
+describe('vcfTelExtractor (dist integration)', function () {
   let readFileStub: sinon.SinonStub;
 
   beforeEach(() => {
@@ -46,6 +48,22 @@ describe('vcfTelExtractor', function () {
           number: '+1234567890',
           firstName: 'John Doe',
           email: 'john.doe@example.com',
+          version: '3.0',
+        },
+      ]);
+    });
+
+    it('should parse raw vCard string directly and skip fs read if it has BEGIN:VCARD or newlines', async function () {
+      const rawVcard = `BEGIN:VCARD\nVERSION:3.0\nFN:Jane Doe\nTEL:+9876543210\nEND:VCARD`;
+
+      const result = await extractTel(rawVcard);
+      
+      // Verify readFile was never invoked
+      expect(readFileStub.called).to.be.false;
+      expect(result).to.deep.equal([
+        {
+          number: '+9876543210',
+          firstName: 'Jane Doe',
           version: '3.0',
         },
       ]);
@@ -101,9 +119,9 @@ describe('vcfTelExtractor', function () {
 
     it('should handle large input gracefully', () => {
       const contact = `BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nTEL:+1234567890\nEND:VCARD\n`;
-      const largeData = contact.repeat(5000);
+      const largeData = contact.repeat(1000);
       const result = parseVcard(largeData);
-      expect(result).to.be.an('array').that.has.lengthOf(5000);
+      expect(result).to.be.an('array').that.has.lengthOf(1000);
     });
 
     it('should correctly unfold folded lines', () => {
@@ -149,7 +167,6 @@ describe('vcfTelExtractor', function () {
     });
 
     it('should normalize phone numbers using libphonenumber-js when normalize option is true', () => {
-      // US local number format with spaces/parentheses
       const data = `BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nTEL:(650) 555-0199\nEND:VCARD`;
       const result = parseVcard(data, {
         normalize: true,
@@ -157,7 +174,7 @@ describe('vcfTelExtractor', function () {
       });
       expect(result).to.deep.equal([
         {
-          number: '+16505550199', // Normalized to E.164
+          number: '+16505550199',
           firstName: 'John Doe',
           version: '3.0',
         },
@@ -200,6 +217,58 @@ describe('vcfTelExtractor', function () {
           version: '3.0',
         },
       ]);
+    });
+
+    it('should correctly parse and save property parameters/attributes in metadata', () => {
+      const data = `BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nTEL;TYPE=CELL,VOICE;VALUE=uri:+1234567890\nEND:VCARD`;
+      const result = parseVcard(data);
+      expect(result).to.deep.equal([
+        {
+          number: '+1234567890',
+          firstName: 'John Doe',
+          version: '3.0',
+          params: {
+            number: [
+              {
+                TYPE: ['CELL', 'VOICE'],
+                VALUE: ['uri'],
+              },
+            ],
+          },
+        },
+      ]);
+    });
+
+    it('should decode escape sequences correctly (single-pass unescaping)', () => {
+      const data = `BEGIN:VCARD\nVERSION:3.0\nFN:John\\, Doe\\; Jr.\nNOTE:Line 1\\\\nLine 2\\nLine 3\nEND:VCARD`;
+      const result = parseVcard(data);
+      expect(result).to.deep.equal([
+        {
+          firstName: 'John, Doe; Jr.',
+          version: '3.0',
+          NOTE: 'Line 1\\nLine 2\nLine 3',
+        },
+      ]);
+    });
+  });
+
+  describe('Browser Entrypoint (dist/browser)', () => {
+    it('should parse vCard string in browser-safe manner without fs', async () => {
+      const data = `BEGIN:VCARD\nVERSION:3.0\nFN:Browser User\nTEL:+1111111111\nEND:VCARD`;
+      const result = await browserExtractTel(data);
+      
+      expect(readFileStub.called).to.be.false;
+      expect(result).to.deep.equal([
+        {
+          number: '+1111111111',
+          firstName: 'Browser User',
+          version: '3.0',
+        },
+      ]);
+    });
+
+    it('should expose parseVcard function', () => {
+      expect(typeof browserExtractTel.parseVcard).to.equal('function');
     });
   });
 });

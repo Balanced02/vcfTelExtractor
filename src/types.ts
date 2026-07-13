@@ -16,8 +16,7 @@ export interface ExtractTelOptions {
   onlyNumbers?: boolean;
 
   /**
-   * For regex-based fallback extraction, includes the '+' prefix if true.
-   * Default is false.
+   * For onlyNumbers output, retains the '+' prefix if true (default false).
    */
   prefix?: boolean;
 
@@ -59,5 +58,6 @@ export interface Contact {
   firstName?: string;
   email?: string | string[];
   version?: string;
+  params?: Record<string, Record<string, string[]>[]>;
   [key: string]: any;
 }

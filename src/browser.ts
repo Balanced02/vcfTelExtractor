@@ -1,6 +1,5 @@
 import { parseVcard as _parseVcard } from './parser';
 import { ExtractTelOptions, Contact } from './types';
-import * as fs from 'fs';
 
 async function extractTel(
   input: string,
@@ -10,15 +9,8 @@ async function extractTel(
     throw new Error('Path is a required argument');
   }
 
-  const isVcardContent = input.trim().startsWith('BEGIN:VCARD') || input.includes('\n');
-
-  if (isVcardContent) {
-    return _parseVcard(input, options);
-  }
-
-  // Node.js filesystem read
-  const content = await fs.promises.readFile(input, 'utf8');
-  return _parseVcard(content, options);
+  // Browser does not support reading files from paths, only raw strings.
+  return _parseVcard(input, options);
 }
 
 // Merge namespace with function to expose static property in TypeScript

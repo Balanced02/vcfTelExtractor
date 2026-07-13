@@ -5,16 +5,24 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "browser": "./dist/browser.js",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": {
+        "import": "./dist/browser.mjs",
+        "require": "./dist/browser.js"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
   },
   "scripts": {
     "build": "tsup",
-    "test": "mocha -r ts-node/register src/**/*.test.ts",
+    "test": "npm run build && mocha -r ts-node/register \"src/**/*.test.ts\"",
     "prepublishOnly": "npm run build"
   },
   "repository": {
