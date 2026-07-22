@@ -14,7 +14,7 @@
 ## Installation
 
 ```sh
-npm install vcfTelExtractor
+npm install vcftelextractor
 ```
 
 ---
@@ -25,12 +25,12 @@ npm install vcfTelExtractor
 
 **ES Modules (ESM) / TypeScript:**
 ```typescript
-import extractTel, { parseVcard } from 'vcfTelExtractor';
+import extractTel, { parseVcard } from 'vcftelextractor';
 ```
 
 **CommonJS:**
 ```javascript
-const extractTel = require('vcfTelExtractor');
+const extractTel = require('vcftelextractor');
 // The direct string parser is also attached:
 // const { parseVcard } = extractTel;
 ```
@@ -71,7 +71,7 @@ A synchronous, browser-safe function that parses a raw vCard string content dire
 
 #### Example 1: Basic Node.js File Extraction
 ```javascript
-const extractTel = require('vcfTelExtractor');
+const extractTel = require('vcftelextractor');
 
 extractTel('./contacts.vcf')
   .then(contacts => console.log(contacts))
@@ -80,7 +80,7 @@ extractTel('./contacts.vcf')
 
 #### Example 2: Normalizing Phone Numbers (ESM)
 ```typescript
-import extractTel from 'vcfTelExtractor';
+import extractTel from 'vcftelextractor';
 
 const result = await extractTel('./contacts.vcf', {
   normalize: true,
@@ -92,7 +92,7 @@ console.log(result);
 
 #### Example 3: Direct String Parsing (Browser-Safe)
 ```javascript
-import { parseVcard } from 'vcfTelExtractor';
+import { parseVcard } from 'vcftelextractor';
 
 const rawVcard = `BEGIN:VCARD
 VERSION:3.0
@@ -107,7 +107,7 @@ console.log(contacts);
 
 #### Example 4: Extracting Parameters and Attributes
 ```javascript
-import { parseVcard } from 'vcfTelExtractor';
+import { parseVcard } from 'vcftelextractor';
 
 const rawVcard = `BEGIN:VCARD
 VERSION:3.0
